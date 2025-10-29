@@ -3,6 +3,7 @@ import os
 from PIL import Image
 from torch.utils.data import DataLoader, Dataset, random_split
 import torchvision.transforms as T
+import numpy as np
 
 
 class DRIVE(Dataset):
@@ -30,8 +31,8 @@ class DRIVE(Dataset):
         image_path = self.images[idx]
         mask_path = self.masks[idx]
 
-        image = Image.open(image_path).convert("RGB")
-        mask = Image.open(mask_path)
+        image = (np.array(Image.open(image_path).convert("RGB")) / 255).astype(np.float32)
+        mask = (np.array(Image.open(mask_path)) / 255).astype(np.float32)
 
         if self.transform:
             augmented = self.transform(image=image, mask=mask)
@@ -40,6 +41,7 @@ class DRIVE(Dataset):
         else:
             image = T.ToTensor()(image)
             mask = T.ToTensor()(mask)
+
 
         return image, mask
 
