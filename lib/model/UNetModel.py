@@ -41,11 +41,11 @@ class UNet(nn.Module):
 
         # decoder
         d0 = F.relu(self.dec_conv0(self.upsample0(b)))
-        d0 = torch.cat([d0, e3], dim=1)  # skip connection
+        d0 = torch.cat([d0, e0], dim=1)  # skip connection
         d1 = F.relu(self.dec_conv1(self.upsample1(d0)))
-        d1 = torch.cat([d1, e2], dim=1)  # skip connection
+        d1 = torch.cat([d1, e1], dim=1)  # skip connection
         d2 = F.relu(self.dec_conv2(self.upsample2(d1)))
-        d2 = torch.cat([d2, e1], dim=1)  # skip connection
+        d2 = torch.cat([d2, e2], dim=1)  # skip connection
         d3 = self.dec_conv3(self.upsample3(d2))  # no activation
         return d3
 
