@@ -61,3 +61,8 @@ def datasetDRIVE(batch_size=64, transform=None, split=(0.8, 0.1, 0.1)):
     test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False)
 
     return (train_loader, val_loader, test_loader), (trainset, valset, testset)
+
+if __name__ == '__main__':
+    _, (train, val, test) = datasetDRIVE()
+    print(f'{len(train)=}, {len(val)=}, {len(test)=}')
+
