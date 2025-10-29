@@ -67,7 +67,7 @@ def datasetPH2(batch_size=8, transform=None, train_ratio=0.7, val_ratio=0.15, te
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_set, batch_size=batch_size, shuffle=False)
 
-    return (train_loader, test_loader, val_loader), (train_set, test_set, val_set)
+    return (train_loader, val_loader, test_loader), (train_set, val_set, test_set)
 
 """example Usage
 
