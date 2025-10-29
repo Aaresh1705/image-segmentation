@@ -14,6 +14,8 @@ from torchvision import models
 from torchsummary import summary
 import torch.optim as optim
 from time import time
+
+from lib.dataset import datasetDRIVE
 from lib.model.EncDecModel import EncDec
 from lib.model.DilatedNetModel import DilatedNet
 from lib.model.UNetModel import UNet, UNet2
@@ -21,22 +23,16 @@ from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 
 # Dataset
 size = 128
-train_transform = transforms.Compose([transforms.Resize((size, size)),
-                                    transforms.ToTensor()])
-test_transform = transforms.Compose([transforms.Resize((size, size)),
+transform = transforms.Compose([transforms.Resize((size, size)),
                                     transforms.ToTensor()])
 
 batch_size = 6
-trainset = PhC(train=True, transform=train_transform)
-train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True,
-                          num_workers=3)
-testset = PhC(train=False, transform=test_transform)
-test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False,
-                          num_workers=3)
+(train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size,transform=transform)
 # IMPORTANT NOTE: There is no validation set provided here, but don't forget to
 # have one for the project
 
 print(f"Loaded {len(trainset)} training images")
+print(f"Loaded {len(valset)} val images")
 print(f"Loaded {len(testset)} test images")
 
 # Training setup
@@ -88,5 +84,5 @@ for epoch in range(epochs):
     print(f' - loss: {avg_loss}')
 
 # Save the model
-torch.save(model, ....)
+#torch.save(model, ....)
 print("Training has finished!")

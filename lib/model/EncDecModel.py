@@ -1,3 +1,7 @@
+import torch.functional as F
+from torch import nn
+
+
 class EncDec(nn.Module):
     def __init__(self):
         super().__init__()
