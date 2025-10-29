@@ -15,6 +15,9 @@ from torchsummary import summary
 import torch.optim as optim
 from time import time
 
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+
 from lib.dataset import datasetDRIVE
 from lib.model.EncDecModel import EncDec
 from lib.model.DilatedNetModel import DilatedNet
@@ -23,11 +26,13 @@ from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 
 # Dataset
 size = 128
-transform = transforms.Compose([transforms.Resize((size, size)),
-                                    transforms.ToTensor()])
+transform = A.Compose([A.Resize(size, size),
+                       ToTensorV2(),
+                       ])
+  # transforms.Compose([transforms.Resize((size, size)), transforms.ToTensor()]))
 
 batch_size = 6
-(train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size,transform=transform)
+(train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size, transform=transform)
 # IMPORTANT NOTE: There is no validation set provided here, but don't forget to
 # have one for the project
 
@@ -36,7 +41,7 @@ print(f"Loaded {len(valset)} val images")
 print(f"Loaded {len(testset)} test images")
 
 # Training setup
-device = ...
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 model = EncDec().to(device)
 #model = UNet().to(device) # TODO
 #model = UNet2().to(device) # TODO
@@ -53,6 +58,7 @@ epochs = 20
 
 # Training loop
 X_test, Y_test = next(iter(test_loader))
+
 model.train()  # train mode
 for epoch in range(epochs):
     tic = time()
