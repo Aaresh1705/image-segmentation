@@ -5,6 +5,7 @@ from torch import nn
 class EncDecNet(nn.Module):
     def __init__(self):
         super().__init__()
+        self.name = 'EncDecNet'
 
         # encoder (downsampling)
         self.enc_conv0 = nn.Conv2d(3, 64, 3, padding=1)
@@ -44,4 +45,4 @@ class EncDecNet(nn.Module):
         d1 = F.relu(self.dec_conv1(self.upsample1(d0)))
         d2 = F.relu(self.dec_conv2(self.upsample2(d1)))
         d3 = self.dec_conv3(self.upsample3(d2))  # no activation
-        return d3
+        return F.sigmoid(d3)

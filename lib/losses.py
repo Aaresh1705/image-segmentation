@@ -7,6 +7,7 @@ class BCELoss(nn.Module):
     """
     def __init__(self):
         super().__init__()
+        self.name = 'BCELoss'
 
     def forward(self, y_pred, y_true):
         loss = torch.mean(y_pred - y_true*y_pred + torch.log(1 + torch.exp(-y_pred)))
@@ -20,9 +21,9 @@ class DiceLoss(nn.Module):
     """
     def __init__(self):
         super().__init__()
+        self.name = 'DiceLoss'
 
     def dice_loss(self, pred, target, smooth=1):
-
         nominator = torch.mean(2 * pred * target + smooth)
         denominator = torch.mean(pred + target) + smooth
         # Return Dice Loss
@@ -45,6 +46,8 @@ class FocalLoss(nn.Module):
     """
     def __init__(self, alpha=1.0, gamma=2.0, reduction="mean"):
         super().__init__()
+        self.name = 'FocalLoss'
+
         self.alpha = alpha
         self.gamma = gamma
         self.reduction = reduction
@@ -79,6 +82,8 @@ class BCELoss_TotalVariation(nn.Module):
     """
     def __init__(self, tv_weight=0.1):
         super().__init__()
+        self.name = 'BCELossTotalVariation'
+
         self.tv_weight = tv_weight
 
     def forward(self, y_pred, y_true):

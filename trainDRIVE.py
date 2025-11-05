@@ -1,6 +1,7 @@
 import torch
 import torch.optim as optim
 from torchsummary import summary
+from torch.nn import functional as F
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -38,6 +39,8 @@ def train(model, train_loader, loss_fn, opt):
         y_val = y_val.to(device)
 
         y_pred = model(X_val)
+        y_pred = F.sigmoid(y_pred)
+
         loss = loss_fn(y_pred, y_val)
         avg_loss_val += loss / len(val_loader)
 
@@ -45,8 +48,7 @@ def train(model, train_loader, loss_fn, opt):
     # validation set after each epoch.
     # model.eval()  # testing mode
     # Y_hat = F.sigmoid(model(X_test.to(device))).detach().cpu()
-    print(f' -  train loss: {avg_loss:.3f}')
-    print(f' -  val loss:   {avg_loss_val:.3f}')
+    return avg_loss, avg_loss_val
 
 
 
@@ -78,15 +80,23 @@ if __name__ == "__main__":
 
     learning_rate = 0.001
     epochs = 20
-
     for loss_function in all_losses:
         opt = optim.Adam(model.parameters(), learning_rate)
         loss_function = loss_function()
+        print(loss_function.name)
 
+        best_loss = float('inf')
         for epoch in range(epochs):
+            train_loss, val_loss = train(model, train_loader, loss_function, opt)
             print(f'------==={{{epoch+1:>2}}}===------')
-            train(model, train_loader, loss_function, opt)
+            print(f' -  train loss: {train_loss:.3f}')
+            print(f' -  val loss:   {val_loss:.3f}')
 
-    # Save the model
-    # torch.save(model, ....)
+            if val_loss < best_loss:
+                best_loss = val_loss
+                print('Updating best model')
+
+                # Save the model
+                torch.save(model, f'models/DRIVE/{model.name}.{loss_function.name}.pth')
+
     print("Training has finished!")

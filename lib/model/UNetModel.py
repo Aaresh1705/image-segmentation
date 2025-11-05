@@ -51,7 +51,7 @@ class UNet(nn.Module):
 
         d3 = self.upsample3(d2)
         out = self.dec_conv3(d3)
-        return out
+        return F.sigmoid(out)
 
 # TODO : Implement a second homemade UNet
 # class UNet2:
