@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 class BCELoss(nn.Module):
+    """Binary Cross entropy loss
+    """
     def __init__(self):
         super().__init__()
 
@@ -12,61 +15,92 @@ class BCELoss(nn.Module):
 
 
 class DiceLoss(nn.Module):
+    """Dice loss function
+
+    """
     def __init__(self):
         super().__init__()
 
     def dice_loss(self, pred, target, smooth=1):
-        """
-        Computes the Dice Loss for binary segmentation.
-        Args:
-            pred: Tensor of predictions (batch_size, 1, H, W).
-            target: Tensor of ground truth (batch_size, 1, H, W).
-            smooth: Smoothing factor to avoid division by zero.
-        Returns:
-            Scalar Dice Loss.
-        """
-        # Apply sigmoid to convert logits to probabilities
-        pred = torch.sigmoid(pred)
-        
-        # Calculate intersection and union
-        intersection = (pred * target).sum(dim=(2, 3))
-        union = pred.sum(dim=(2, 3)) + target.sum(dim=(2, 3))
-        
-        # Compute Dice Coefficient
-        dice = (2. * intersection + smooth) / (union + smooth)
-        
+
+        nominator = torch.mean(2 * pred * target + smooth)
+        denominator = torch.mean(pred + target) + smooth
         # Return Dice Loss
-        return 1 - dice.mean()
+        return 1 - (nominator / denominator)
     
     
     def forward(self, y_pred, y_true):
+        if y_true.ndim == 3:
+            y_true = y_true.unsqueeze(1)
         return self.dice_loss(y_pred, y_true)
-        raise Exception("Implement this!")
+
 
 class FocalLoss(nn.Module):
-    def __init__(self):
-        super().__init__()
+    """Focal loss function
 
-    #Alpha should be chosen as the inverse frequency of the class that pixel i
-    def focal_loss(self, inputs, targets, alpha=1, gamma=2):
-        # Binary Cross-Entropy loss calculation
-        bce_loss = torch.nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
-        pt = torch.exp(-bce_loss)  # Convert BCE loss to probability
-        focal_loss = alpha * (1 - pt) ** gamma * bce_loss  # Apply focal adjustment
-        return focal_loss.mean()
+    Args:
+        alpha (float): Weighting factor for the class
+        gamma (float): Focusing parameter
+        reduction (str): Reduction method
+    """
+    def __init__(self, alpha=1.0, gamma=2.0, reduction="mean"):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.reduction = reduction
 
     def forward(self, y_pred, y_true):
-        return self.focal_loss(y_pred, y_true)
-        raise Exception("Implement this!")
+        # Match dimensions if necessary
+        if y_true.ndim == 3:
+            y_true = y_true.unsqueeze(1)
+
+        # Compute binary cross-entropy with logits 
+        bce_loss = F.binary_cross_entropy_with_logits(y_pred, y_true, reduction="none")
+
+        # Compute pt = exp(-bce_loss) = predicted probability of the true class
+        pt = torch.exp(-bce_loss)
+
+        # Compute focal loss
+        focal_loss = self.alpha * (1 - pt) ** self.gamma * bce_loss
+
+        # Reduce to scalar
+        if self.reduction == "mean":
+            return focal_loss.mean()
+        elif self.reduction == "sum":
+            return focal_loss.sum()
+        else:
+            return focal_loss
 
 class BCELoss_TotalVariation(nn.Module):
-    def __init__(self):
+    """Bincary cross entropy with Total Variance regularization
+
+    Args:
+        tv_weight (float): Weighting factor for the total variance term
+    """
+    def __init__(self, tv_weight=0.1):
         super().__init__()
+        self.tv_weight = tv_weight
 
     def forward(self, y_pred, y_true):
-        loss = torch.mean(y_pred - y_true*y_pred + torch.log(1 + torch.exp(-y_pred)))
-        # Total Variation Regularization / Contiguity
-        regularization = torch.sum(torch.abs(y_pred[:, :, :, :-1] - y_pred[:, :, :, 1:])) + \
-                         torch.sum(torch.abs(y_pred[:, :, :-1, :] - y_pred[:, :, :, 1:, :]))
-        return loss + 0.1*regularization
+        # Ensure target has channel dimension
+        if y_true.ndim == 3:
+            y_true = y_true.unsqueeze(1)
+
+        #  Binary Cross-Entropy 
+        bce_loss = F.binary_cross_entropy_with_logits(y_pred, y_true)
+
+        #  Apply sigmoid for contiguity term
+        y_prob = torch.sigmoid(y_pred)
+
+        #  Compute total variation (horizontal + vertical differences)
+        diff_h = torch.abs(y_prob[:, :, :, 1:] - y_prob[:, :, :, :-1])
+        diff_v = torch.abs(y_prob[:, :, 1:, :] - y_prob[:, :, :-1, :])
+        tv_loss = torch.sum(diff_h) + torch.sum(diff_v)
+
+        #  Normalize by batch size to avoid scaling with image size
+        tv_loss = tv_loss / y_pred.size(0)
+
+        #  Combine both
+        loss = bce_loss + self.tv_weight * tv_loss
+        return loss
 

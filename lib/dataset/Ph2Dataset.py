@@ -44,13 +44,13 @@ class PH2_Dataset_images(torch.utils.data.Dataset):
 
         #Needs to be numpy for albumentations to work
         image = np.array(image)
-        mask = np.array(label)
+        mask = np.array(label)/255.0
         
         # Apply transform if provided
         if self.transform:
             transformed = self.transform(image=image, mask=mask)
-            image = transformed["image"]
-            mask = transformed["mask"]
+            image = transformed["image"].float()
+            mask = transformed["mask"].float()
 
         return image, mask
 
@@ -74,29 +74,3 @@ def datasetPH2(batch_size=8, transform=None, train_ratio=0.7, val_ratio=0.15, te
 
     return (train_loader, val_loader, test_loader), (train_set, val_set, test_set)
 
-"""example Usage
-
-# Define transforms (optional)
-transform = T.Compose([
-    T.Resize((256, 256)),
-    T.ToTensor()
-])
-
-# Call the dataset loader function
-(train_loader, test_loader, val_loader), (train_set, test_set, val_set) = datasetPH2(
-    batch_size=4,
-    transform=transform
-)
-
-# Print dataset info
-print(f"Total train samples: {len(train_set)}")
-print(f"Total validation samples: {len(val_set)}")
-print(f"Total test samples: {len(test_set)}")
-
-# Check a single batch
-for X, Y in train_loader:
-    print(f"Image batch shape: {X.shape}")  # should be (batch_size, 3, H, W)
-    print(f"Mask batch shape: {Y.shape}")   # should be (batch_size, 1, H, W)
-    print(f"Image dtype: {X.dtype}, Mask dtype: {Y.dtype}")
-    break  # just check first batch
-"""
