@@ -21,7 +21,7 @@ from albumentations.pytorch import ToTensorV2
 from lib.dataset import datasetDRIVE
 from lib.model.EncDecModel import EncDec
 from lib.model.DilatedNetModel import DilatedNet
-from lib.model.UNetModel import UNet, UNet2
+from lib.model.UNetModel import UNet #, UNet2
 from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 
 # Dataset

@@ -40,14 +40,18 @@ class UNet(nn.Module):
         b = F.relu(self.bottleneck_conv(e3))
 
         # decoder
-        d0 = F.relu(self.dec_conv0(self.upsample0(b)))
-        d0 = torch.cat([d0, e0], dim=1)  # skip connection
-        d1 = F.relu(self.dec_conv1(self.upsample1(d0)))
-        d1 = torch.cat([d1, e1], dim=1)  # skip connection
-        d2 = F.relu(self.dec_conv2(self.upsample2(d1)))
-        d2 = torch.cat([d2, e2], dim=1)  # skip connection
-        d3 = self.dec_conv3(self.upsample3(d2))  # no activation
-        return d3
+        d0 = self.upsample0(b)
+        d0 = F.relu(self.dec_conv0(torch.cat([d0, e3], dim=1)))
+
+        d1 = self.upsample1(d0)
+        d1 = F.relu(self.dec_conv1(torch.cat([d1, e2], dim=1)))
+
+        d2 = self.upsample2(d1)
+        d2 = F.relu(self.dec_conv2(torch.cat([d2, e1], dim=1)))
+
+        d3 = self.upsample3(d2)
+        out = self.dec_conv3(d3)
+        return out
 
 # TODO : Implement a second homemade UNet
 # class UNet2:
