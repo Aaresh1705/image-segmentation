@@ -6,7 +6,7 @@ import pandas as pd
 from PIL import Image
 import glob
 from torchvision import transforms as T
-
+import numpy as np
 DATA_PATH = '/dtu/datasets1/02516/PH2_Dataset_images/'
 
 class PH2_Dataset_images(torch.utils.data.Dataset):
@@ -42,12 +42,17 @@ class PH2_Dataset_images(torch.utils.data.Dataset):
         image = Image.open(self.image_paths[idx]).convert('RGB')
         label = Image.open(self.label_paths[idx]).convert('L')  # mask as grayscale
 
+        #Needs to be numpy for albumentations to work
+        image = np.array(image)
+        mask = np.array(label)
+        
         # Apply transform if provided
         if self.transform:
-            image = self.transform(image)
-            label = self.transform(label)
+            transformed = self.transform(image=image, mask=mask)
+            image = transformed["image"]
+            mask = transformed["mask"]
 
-        return image, label
+        return image, mask
 
 def datasetPH2(batch_size=8, transform=None, train_ratio=0.7, val_ratio=0.15, test_ratio=0.15):
     # Create the dataset

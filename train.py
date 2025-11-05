@@ -19,6 +19,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from lib.dataset import datasetDRIVE
+from lib.dataset import Ph2Dataset
 from lib.model.EncDecModel import EncDec
 from lib.model.DilatedNetModel import DilatedNet
 from lib.model.UNetModel import UNet #, UNet2
@@ -27,12 +28,14 @@ from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 # Dataset
 size = 128
 transform = A.Compose([A.Resize(size, size),
+                        A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),  # <- converts to float32 for albumentations
                        ToTensorV2(),
                        ])
   # transforms.Compose([transforms.Resize((size, size)), transforms.ToTensor()]))
 
 batch_size = 6
-(train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size, transform=transform)
+# (train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size, transform=transform)
+(train_loader, val_loader, test_loader), (trainset, valset, testset) = Ph2Dataset.datasetPH2(batch_size=batch_size, transform=transform)
 # IMPORTANT NOTE: There is no validation set provided here, but don't forget to
 # have one for the project
 
