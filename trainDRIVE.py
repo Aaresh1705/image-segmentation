@@ -1,28 +1,12 @@
-import os
-import numpy as np
-import glob
-import PIL.Image as Image
-
-# pip install torchsummary
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchvision.datasets as datasets
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
-from torchvision import models
-from torchsummary import summary
 import torch.optim as optim
 from time import time
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from lib.dataset import datasetDRIVE
-from lib.dataset import Ph2Dataset
-from lib.model.EncDecModel import EncDec
-from lib.model.DilatedNetModel import DilatedNet
-from lib.model.UNetModel import UNet #, UNet2
+from lib.dataset import datasetDRIVE, datasetPH2
+from lib.model import EncDecNet, DilatedNet, UNet
 from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 
 # Dataset
@@ -45,7 +29,7 @@ print(f"Loaded {len(testset)} test images")
 
 # Training setup
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = EncDec().to(device)
+model = EncDecNet().to(device)
 #model = UNet().to(device) # TODO
 #model = UNet2().to(device) # TODO
 #model = DilatedNet().to(device) # TODO
