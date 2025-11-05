@@ -47,6 +47,7 @@ class FocalLoss(nn.Module):
     def __init__(self):
         super().__init__()
 
+    #Alpha should be chosen as the inverse frequency of the class that pixel i
     def focal_loss(self, inputs, targets, alpha=1, gamma=2):
         # Binary Cross-Entropy loss calculation
         bce_loss = torch.nn.functional.binary_cross_entropy_with_logits(inputs, targets, reduction='none')
