@@ -5,7 +5,7 @@ from time import time
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
-from lib.dataset import datasetDRIVE, datasetPH2
+from lib.dataset import datasetDRIVE
 from lib.model import EncDecNet, DilatedNet, UNet
 from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 
@@ -19,9 +19,6 @@ transform = A.Compose([A.Resize(size, size),
 
 batch_size = 6
 (train_loader, val_loader, test_loader), (trainset, valset, testset) = datasetDRIVE(batch_size=batch_size, transform=transform)
-# (train_loader, val_loader, test_loader), (trainset, valset, testset) = Ph2Dataset.datasetPH2(batch_size=batch_size, transform=transform)
-# IMPORTANT NOTE: There is no validation set provided here, but don't forget to
-# have one for the project
 
 print(f"Loaded {len(trainset)} training images")
 print(f"Loaded {len(valset)} val images")
