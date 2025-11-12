@@ -10,8 +10,12 @@ class BCELoss(nn.Module):
         self.name = 'BCELoss'
 
     def forward(self, y_pred, y_true):
-        loss = torch.mean(y_pred - y_true*y_pred + torch.log(1 + torch.exp(-y_pred)))
-        return loss
+        if y_true.ndim == 3:
+            y_true = y_true.unsqueeze(1)
+        assert y_pred.shape == y_true.shape, "Shape mismatch between predictions and ground truth"
+        return F.binary_cross_entropy_with_logits(y_pred, y_true)
+        # loss = torch.mean(y_pred - y_true*y_pred + torch.log(1 + torch.exp(-y_pred)))
+        # return loss
 
 
 
@@ -23,7 +27,11 @@ class DiceLoss(nn.Module):
         super().__init__()
         self.name = 'DiceLoss'
 
-    def dice_loss(self, pred, target, smooth=1):
+    def dice_loss(self, pred_prob, target, smooth=1):
+        # input is already in logits, use it to get binary predictions
+        pred = torch.round(pred_prob)
+        # Calculate Dice coefficient
+        
         nominator = torch.mean(2 * pred * target + smooth)
         denominator = torch.mean(pred + target) + smooth
         # Return Dice Loss
@@ -33,6 +41,8 @@ class DiceLoss(nn.Module):
     def forward(self, y_pred, y_true):
         if y_true.ndim == 3:
             y_true = y_true.unsqueeze(1)
+        assert y_pred.shape == y_true.shape, "Shape mismatch between predictions and ground truth"
+        
         return self.dice_loss(y_pred, y_true)
 
 
@@ -56,7 +66,7 @@ class FocalLoss(nn.Module):
         # Match dimensions if necessary
         if y_true.ndim == 3:
             y_true = y_true.unsqueeze(1)
-
+        assert y_pred.shape == y_true.shape, "Shape mismatch between predictions and ground truth"
         # Compute binary cross-entropy with logits 
         bce_loss = F.binary_cross_entropy_with_logits(y_pred, y_true, reduction="none")
 
@@ -80,7 +90,7 @@ class BCELoss_TotalVariation(nn.Module):
     Args:
         tv_weight (float): Weighting factor for the total variance term
     """
-    def __init__(self, tv_weight=0.1):
+    def __init__(self, tv_weight=1e-5):
         super().__init__()
         self.name = 'BCELossTotalVariation'
 
@@ -90,13 +100,12 @@ class BCELoss_TotalVariation(nn.Module):
         # Ensure target has channel dimension
         if y_true.ndim == 3:
             y_true = y_true.unsqueeze(1)
-
+        assert y_pred.shape == y_true.shape, "Shape mismatch between predictions and ground truth"
         #  Binary Cross-Entropy 
         bce_loss = F.binary_cross_entropy_with_logits(y_pred, y_true)
 
-        #  Apply sigmoid for contiguity term
-        y_prob = torch.sigmoid(y_pred)
-
+        #  Since sigmoid is already in the model
+        y_prob = y_pred
         #  Compute total variation (horizontal + vertical differences)
         diff_h = torch.abs(y_prob[:, :, :, 1:] - y_prob[:, :, :, :-1])
         diff_v = torch.abs(y_prob[:, :, 1:, :] - y_prob[:, :, :-1, :])
@@ -108,4 +117,20 @@ class BCELoss_TotalVariation(nn.Module):
         #  Combine both
         loss = bce_loss + self.tv_weight * tv_loss
         return loss
+    
+
+class BCELoss_PositiveWeights(nn.Module):
+    def __init__(self, pos_weight=5.0):  # adjust based on dataset imbalance
+        super(BCELoss_PositiveWeights, self).__init__()
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.loss = nn.BCEWithLogitsLoss(pos_weight=torch.tensor([pos_weight]).to(device))
+        self.name = 'BCELoss_PositiveWeights'
+
+    def forward(self, inputs, targets):
+        # Ensure target has channel dimension
+        if targets.ndim == 3:
+            targets = targets.unsqueeze(1)
+        assert inputs.shape == targets.shape, "Shape mismatch between predictions and ground truth"
+        
+        return self.loss(inputs, targets)
 
