@@ -1,3 +1,3 @@
-from .losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
+from .losses import BCELoss, FocalLoss, BCELoss_TotalVariation, BCELoss_PositiveWeights
 
-all_losses = [BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation]
+all_losses = [BCELoss_PositiveWeights,BCELoss, FocalLoss, BCELoss_TotalVariation]

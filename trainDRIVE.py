@@ -2,7 +2,8 @@ import torch
 import torch.optim as optim
 from torchsummary import summary
 from torch.nn import functional as F
-
+from measure import evaluate_model
+from torch.utils.data import DataLoader 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
@@ -72,15 +73,14 @@ if __name__ == "__main__":
     print(f"Loaded {len(testset)} test images")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = EncDecNet().to(device)
-    # model = UNet().to(device) # TODO
+    # model = EncDecNet().to(device)
     # model = UNet2().to(device) # TODO
     # model = DilatedNet().to(device) # TODO
-    summary(model, (3, 256, 256))
 
-    learning_rate = 0.001
+    learning_rate = 1e-3
     epochs = 20
     for loss_function in all_losses:
+        model = UNet().to(device) 
         opt = optim.Adam(model.parameters(), learning_rate)
         loss_function = loss_function()
         print(loss_function.name)
@@ -89,14 +89,16 @@ if __name__ == "__main__":
         for epoch in range(epochs):
             train_loss, val_loss = train(model, train_loader, loss_function, opt)
             print(f'------==={{{epoch+1:>2}}}===------')
+            print(loss_function.name)
             print(f' -  train loss: {train_loss:.3f}')
             print(f' -  val loss:   {val_loss:.3f}')
-
+            print(evaluate_model(model, val_loader))
+            model.train()
             if val_loss < best_loss:
                 best_loss = val_loss
                 print('Updating best model')
-
                 # Save the model
                 torch.save(model, f'models/DRIVE/{model.name}.{loss_function.name}.pth')
 
+    summary(model, (3, 256, 256))   
     print("Training has finished!")

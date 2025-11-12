@@ -1,4 +1,5 @@
 from datetime import date, datetime
+import matplotlib.pyplot as plt
 import os
 import numpy as np
 import glob
@@ -18,8 +19,10 @@ from lib.dataset import datasetPH2
 from lib.model.EncDecModel import EncDecNet as EncDec
 from lib.model.EncDecModel import EncDecNet
 from lib.model.DilatedNetModel import DilatedNet
-from lib.model.UNetModel import UNet #, UNet2
-from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
+from lib.model.UNetModel import UNet, UNet2 #, UNet2
+from lib.losses import BCELoss, BCELoss_PositiveWeights, DiceLoss, FocalLoss, BCELoss_TotalVariation
+from measure import evaluate_model
+from lib import all_losses
 
 # Dataset
 size = 128
@@ -118,24 +121,14 @@ def train(model, train_loader, loss_fn, opt):
     print(f' - loss: {avg_loss}')
     # save the loss curve in a file with the date and time of running
     #also save the plot
+    
+    summary = evaluate_model(model, val_loader)
 
-    with open(f"loss_curve_{now}.txt", "a") as f:
-        f.write(f"{epoch+1},{avg_loss}\n")
+    with open(f"loss_curve_final_ph2.txt", "a") as f:
+        f.write(f"{epoch+1},{avg_loss},{summary}\n")
 
-import matplotlib.pyplot as plt
-epochs_list = list(range(1, epoch+2))
-losses_list = []
-with open(f"loss_curve_{now}.txt", "r") as f:
-    for line in f:
-        epoch_num, loss_val = line.strip().split(",")
-        losses_list.append(float(loss_val))
-plt.plot(epochs_list, losses_list, label="Loss")
-plt.xlabel("Epoch")
-plt.ylabel("Loss")
-plt.title("Loss Curve")
-plt.legend()
-plt.savefig(f"loss_curve_{now}.png")
-plt.close()
+
+
 
 
 
@@ -159,23 +152,38 @@ if __name__ == "__main__":
     print(f"Loaded {len(testset)} test images")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = EncDecNet().to(device)
     # model = UNet().to(device) # TODO
     # model = UNet2().to(device) # TODO
     # model = DilatedNet().to(device) # TODO
-    summary(model, (3, 256, 256))
 
-    learning_rate = 0.001
+    learning_rate = 0.0001
     epochs = 20
 
     for loss_function in all_losses:
+        model = UNet2(n_channels=3, n_classes=1).to(device)
         opt = optim.Adam(model.parameters(), learning_rate)
         loss_function = loss_function()
-
+        # print loss function name
+        print(f"Using Loss function: {loss_function.name}")
+        # If loss function is BCELoss_PositiveWeights, set find the ratio of positive to negative pixels in the training set
+        if loss_function.name == "BCELoss_PositiveWeights":
+            pos_pixels = 0
+            neg_pixels = 0
+            for _, masks in train_loader:
+                pos_pixels += torch.sum(masks == 1).item()
+                neg_pixels += torch.sum(masks == 0).item()
+            pos_weight = pos_pixels / (pos_pixels + neg_pixels)
+            loss_function = BCELoss_PositiveWeights(pos_weight=pos_weight)
+            print(f"Positive weight set to: {pos_weight:.3f}")
+            
         for epoch in range(epochs):
+            print(f"Using {loss_function.name}")
             print(f'------==={{{epoch+1:>2}}}===------')
             train(model, train_loader, loss_function, opt)
+            print(evaluate_model(model, val_loader))
+            model.train()
 
     # Save the model
     # torch.save(model, ....)
+    summary(model, (3, 256, 256))
     print("Training has finished!")
