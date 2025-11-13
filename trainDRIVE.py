@@ -1,3 +1,5 @@
+import datetime
+from datetime import datetime
 import torch
 import torch.optim as optim
 from torchsummary import summary
@@ -8,12 +10,14 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from lib.dataset import datasetDRIVE
-from lib.model import EncDecNet, DilatedNet, UNet
+from lib.model.UNetModel import UNet, UNet2 
+from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 from lib import all_losses
 
 
 def train(model, train_loader, loss_fn, opt):
     model.train()  # train mode
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     avg_loss = 0
     for X_batch, y_true in train_loader:
         X_batch = X_batch.to(device)
@@ -49,6 +53,11 @@ def train(model, train_loader, loss_fn, opt):
     # validation set after each epoch.
     # model.eval()  # testing mode
     # Y_hat = F.sigmoid(model(X_test.to(device))).detach().cpu()
+    summary = evaluate_model(model, val_loader)
+
+    with open(f"loss_curve_final_DRIIVE.txt", "a") as f:
+        f.write(f"epochs: {epoch+1}, train_loss: {avg_loss}, val_loss: {avg_loss_val}, summary: {summary}\n")
+
     return avg_loss, avg_loss_val
 
 
@@ -57,11 +66,15 @@ def train(model, train_loader, loss_fn, opt):
 if __name__ == "__main__":
     # Dataset
     size = 128
-    transform = A.Compose([A.Resize(size, size),
-                           A.Normalize(mean=(0.0, 0.0, 0.0), std=(1.0, 1.0, 1.0)),
-                           # <- converts to float32 for albumentations
-                           ToTensorV2(),
-                           ])
+    
+    transform = A.Compose([
+        A.Resize(height=size, width=size),
+        A.RandomRotate90(p=0.5),
+        A.HorizontalFlip(p=0.5),
+        A.VerticalFlip(p=0.5),
+        A.RandomCrop(height=size, width=size, p=0.8),
+        ToTensorV2(),
+    ])
     # transforms.Compose([transforms.Resize((size, size)), transforms.ToTensor()]))
 
     batch_size = 6
@@ -80,7 +93,7 @@ if __name__ == "__main__":
     learning_rate = 1e-3
     epochs = 20
     for loss_function in all_losses:
-        model = UNet().to(device) 
+        model = UNet2(n_channels=3, n_classes=1).to(device) 
         opt = optim.Adam(model.parameters(), learning_rate)
         loss_function = loss_function()
         print(loss_function.name)
@@ -99,6 +112,42 @@ if __name__ == "__main__":
                 print('Updating best model')
                 # Save the model
                 torch.save(model, f'models/DRIVE/{model.name}.{loss_function.name}.pth')
+        #Write to file "Final scores" after all epochs are done
+        final_summary_train = evaluate_model(model, train_loader)
+        final_summary_test = evaluate_model(model, test_loader)
+        final_summary_val = evaluate_model(model, val_loader)
+        final_summary = f"Train: {final_summary_train}, Val: {final_summary_val}, Test: {final_summary_test}"
+        with open(f"final_scores/final_scores_drive.txt", "a") as f:
+            f.write(f"Model: {model.name}, Loss Function: {loss_function.name}, time: {now} Summary: {final_summary}\n")
+        print(f"Final evaluation on test set: {final_summary}")
 
     summary(model, (3, 256, 256))   
     print("Training has finished!")
+
+    #Visualize some test results by showing an image and its predicted mask
+    model.eval()
+    import matplotlib.pyplot as plt
+    X_test, y_test = next(iter(test_loader))
+    X_test = X_test.to(device)
+    y_pred = (model(X_test)).detach().cpu()
+    y_test = y_test.unsqueeze(1)
+    print("X_test:", X_test.shape)
+    print("y_test:", y_test.shape)
+    print("y_pred:", y_pred.shape)
+    num_images = 4
+    for i in range(num_images):
+        plt.figure(figsize=(10,5))
+        plt.subplot(1,3,1)
+        plt.title("Input Image")
+        plt.imshow(X_test[i].permute(1,2,0).cpu().squeeze())
+        plt.axis('off')
+        plt.subplot(1,3,2)  
+        plt.title("Predicted Mask")
+        plt.imshow(y_pred[i,0].squeeze(), cmap='gray')
+        plt.axis('off')
+        plt.subplot(1,3,3)
+        plt.title("Ground Truth Mask")
+        plt.imshow(y_test[i,0].squeeze(), cmap='gray')
+        plt.axis('off')
+        plt.savefig(f"test_predictions_DRIVE_{i}.png", dpi=150)
+    print("Test predictions visualized!")    # plot_metrics("loss_curve_final_DRIIVE.txt")

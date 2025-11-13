@@ -1,27 +1,22 @@
 import re
 import pandas as pd
 import matplotlib.pyplot as plt
-import sys
 
 def parse_line(line):
-    """Extract epoch, losses, and metrics from one line of text."""
     metrics = {}
-    
-    # Epoch
     epoch_match = re.search(r'epochs:\s*(\d+)', line)
     metrics["epoch"] = int(epoch_match.group(1)) if epoch_match else None
 
-    # Train/Val loss
+    # Train and validation loss
     train_match = re.search(r'train_loss:\s*([\deE\.\-]+)', line)
     val_match = re.search(r'val_loss:\s*([\deE\.\-]+)', line)
     metrics["train_loss"] = float(train_match.group(1)) if train_match else None
     metrics["val_loss"] = float(val_match.group(1)) if val_match else None
 
-    # Other metrics (IoU, Dice, etc.)
+    # Other metrics
     summaries = re.findall(r'(\w+):\s*([-\deE\.]+)', line.split("summary:")[-1])
     for key, value in summaries:
         metrics[key] = float(value)
-
     return metrics
 
 
@@ -31,19 +26,24 @@ def plot_metrics(filename):
 
     data = pd.DataFrame([parse_line(l) for l in lines])
 
-    # Identify how many loss functions (20 epochs each)
-    epochs_per_loss = 20
-    num_lossfuncs = len(data) // epochs_per_loss
-    loss_labels = [f"lossfunction{i+1}" for i in range(num_lossfuncs)]
+    # --- Detect blocks automatically (each block starts with epoch = 1)
+    block_ids = []
+    current_block = 0
+    for i, epoch in enumerate(data["epoch"]):
+        if epoch == 1 and i > 0:
+            current_block += 1
+        block_ids.append(current_block)
+    data["loss_func_id"] = block_ids
 
-    # Get all metrics except epoch
-    metrics = [c for c in data.columns if c != "epoch"]
+    # Custom names for each loss function
+    loss_labels = ["BCELoss_PositiveWeights", "BCELoss", "FocalLoss", "BCELoss_TotalVariation"]
+    data["loss_func_name"] = data["loss_func_id"].map(lambda i: loss_labels[i] if i < len(loss_labels) else f"Loss_{i}")
 
-    # Plot each metric
+    metrics = [c for c in data.columns if c not in ["epoch", "loss_func_id", "loss_func_name"]]
+
     for metric in metrics:
         plt.figure(figsize=(8, 5))
-        for i, name in enumerate(loss_labels):
-            subset = data.iloc[i*epochs_per_loss:(i+1)*epochs_per_loss]
+        for name, subset in data.groupby("loss_func_name"):
             plt.plot(subset["epoch"], subset[metric], label=name, marker='o')
         plt.title(metric)
         plt.xlabel("Epoch")
@@ -59,8 +59,4 @@ def plot_metrics(filename):
 
 
 if __name__ == "__main__":
-    # if len(sys.argv) < 2:
-    #     print("Usage: python plot_lossfunctions.py <datafile>")
-    #     sys.exit(1)
-
     plot_metrics("loss_curve_final_DRIIVE.txt")

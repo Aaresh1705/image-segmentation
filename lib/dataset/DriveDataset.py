@@ -8,15 +8,16 @@ import numpy as np
 
 class DRIVE(Dataset):
     def __init__(self,
-                 root_dir='/dtu/datasets1/02516/DRIVE/',
+                 root_dir='/zhome/7f/5/168608/DRIVE',
+                #  root_dir='/dtu/datasets1/02516/DRIVE/',
                  transform=None):
         self.transform = transform
 
-        train_images = sorted(glob(os.path.join(root_dir, 'training/images/*.tif')))
-        train_masks = sorted(glob(os.path.join(root_dir, 'training/mask/*.gif')))
+        train_images = sorted(glob(os.path.join(root_dir, 'train/images/*.tif')))
+        train_masks = sorted(glob(os.path.join(root_dir, 'train/labels/*.png')))
 
         test_images = sorted(glob(os.path.join(root_dir, 'test/images/*.tif')))
-        test_masks = sorted(glob(os.path.join(root_dir, 'test/mask/*.gif')))
+        test_masks = sorted(glob(os.path.join(root_dir, 'test/labels/*.png')))
 
         images = train_images + test_images
         masks = train_masks + test_masks
@@ -32,7 +33,9 @@ class DRIVE(Dataset):
         mask_path = self.masks[idx]
 
         image = (np.array(Image.open(image_path).convert("RGB")) / 255).astype(np.float32)
-        mask = (np.array(Image.open(mask_path)) / 255).astype(np.float32)
+        mask = Image.open(mask_path).convert("L")
+
+        mask = (np.array(mask) / 255).astype(np.float32)
 
         if self.transform:
             augmented = self.transform(image=image, mask=mask)
@@ -65,6 +68,27 @@ def datasetDRIVE(batch_size=64, transform=None, split=(0.8, 0.1, 0.1)):
     return (train_loader, val_loader, test_loader), (trainset, valset, testset)
 
 if __name__ == '__main__':
-    _, (train, val, test) = datasetDRIVE()
+    (train_loader, val_loader, test_loader), (train, val, test) = datasetDRIVE()
     print(f'{len(train)=}, {len(val)=}, {len(test)=}')
+    import matplotlib.pyplot as plt
+    for i in range(3):
+        img, mask = next(iter(val_loader))
+        print(f'{img.shape=}, {mask.shape=}')
+        
+        # Plot first image from batch
+        plt.figure(figsize=(10,5))
+        plt.subplot(1,2,1)
+        plt.title("Input Image")
+        plt.imshow(img[0].permute(1,2,0))
+        plt.axis('off')
+
+        plt.subplot(1,2,2)
+        plt.title("Mask")
+        plt.imshow(mask[0].squeeze(), cmap='gray')
+        plt.axis('off')
+
+        plt.savefig(f"sample_DRIVE_{i}.png", dpi=150)
+        plt.show()
+
+        print("Done")
 

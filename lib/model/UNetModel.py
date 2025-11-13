@@ -144,6 +144,7 @@ class UNet2(nn.Module):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
+        self.name = 'UNet2'
 
         self.inc = (DoubleConv(n_channels, 64))
         self.down1 = (Down(64, 128))

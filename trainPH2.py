@@ -23,6 +23,8 @@ from lib.model.UNetModel import UNet, UNet2 #, UNet2
 from lib.losses import BCELoss, BCELoss_PositiveWeights, DiceLoss, FocalLoss, BCELoss_TotalVariation
 from measure import evaluate_model
 from lib import all_losses
+from torch.nn import functional as F
+from torch.utils.data import DataLoader
 
 # Dataset
 size = 128
@@ -182,8 +184,46 @@ if __name__ == "__main__":
             train(model, train_loader, loss_function, opt)
             print(evaluate_model(model, val_loader))
             model.train()
+        #Write to file "Final scores" after all epochs are done
+        final_summary_train = evaluate_model(model, train_loader)
+        final_summary_test = evaluate_model(model, test_loader)
+        final_summary_val = evaluate_model(model, val_loader)
+        final_summary = f"Train: {final_summary_train}, Val: {final_summary_val}, Test: {final_summary_test}"
+        with open(f"final_scores/final_scores_ph2.txt", "a") as f:
+            f.write(f"Model: {model.name}, Loss Function: {loss_function.name}, time: {now} Summary: {final_summary}\n")
+        print(f"Final evaluation on test set: {final_summary}")
 
     # Save the model
     # torch.save(model, ....)
     summary(model, (3, 256, 256))
     print("Training has finished!")
+    
+    
+    
+    #Visualize some test results by showing an image and its predicted mask
+    model.eval()
+    import matplotlib.pyplot as plt
+    X_test, y_test = next(iter(test_loader))
+    X_test = X_test.to(device)
+    y_pred = F.sigmoid(model(X_test)).detach().cpu()
+    y_test = y_test.unsqueeze(1)
+    print("X_test:", X_test.shape)
+    print("y_test:", y_test.shape)
+    print("y_pred:", y_pred.shape)
+    num_images = 4
+    for i in range(num_images):
+        plt.figure(figsize=(10,5))
+        plt.subplot(1,3,1)
+        plt.title("Input Image")
+        plt.imshow(X_test[i].permute(1,2,0).cpu().squeeze())
+        plt.axis('off')
+        plt.subplot(1,3,2)  
+        plt.title("Predicted Mask")
+        plt.imshow(y_pred[i,0].squeeze(), cmap='gray')
+        plt.axis('off')
+        plt.subplot(1,3,3)
+        plt.title("Ground Truth Mask")
+        plt.imshow(y_test[i,0].squeeze(), cmap='gray')
+        plt.axis('off')
+    plt.savefig("test_predictions_PH2.png", dpi=150)
+    print("Test predictions visualized!")    # plot_metrics("loss_curve_final_DRIIVE.txt")
