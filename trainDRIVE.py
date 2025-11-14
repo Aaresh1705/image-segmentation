@@ -10,7 +10,7 @@ import albumentations as A
 from albumentations.pytorch import ToTensorV2
 
 from lib.dataset import datasetDRIVE
-from lib.model.UNetModel import UNet, UNet2 
+from lib.model.UNetModel import UNet, UNet2
 from lib.losses import BCELoss, DiceLoss, FocalLoss, BCELoss_TotalVariation
 from lib import all_losses
 
@@ -73,7 +73,7 @@ if __name__ == "__main__":
         A.HorizontalFlip(p=0.5),
         A.VerticalFlip(p=0.5),
         A.RandomCrop(height=size, width=size, p=0.8),
-        ToTensorV2(),
+        ToTensorV2()
     ])
     # transforms.Compose([transforms.Resize((size, size)), transforms.ToTensor()]))
 
@@ -89,11 +89,12 @@ if __name__ == "__main__":
     # model = EncDecNet().to(device)
     # model = UNet2().to(device) # TODO
     # model = DilatedNet().to(device) # TODO
-
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     learning_rate = 1e-3
     epochs = 20
     for loss_function in all_losses:
         model = UNet2(n_channels=3, n_classes=1).to(device) 
+        # model = EncDecNet().to(device)
         opt = optim.Adam(model.parameters(), learning_rate)
         loss_function = loss_function()
         print(loss_function.name)
