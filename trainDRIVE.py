@@ -72,10 +72,10 @@ if __name__ == "__main__":
     print(f"Loaded {len(testset)} test images")
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    model = EncDecNet().to(device)
+    # model = EncDecNet().to(device)
     # model = UNet().to(device) # TODO
     # model = UNet2().to(device) # TODO
-    # model = DilatedNet().to(device) # TODO
+    model = DilatedNet().to(device) # TODO
     summary(model, (3, 256, 256))
 
     learning_rate = 0.001
